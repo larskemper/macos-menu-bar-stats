@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mac-menu-bar-app",
+  "productName": "Menu bar stats",
   "version": "0.1.0",
   "identifier": "com.lkemper.mac-menu-bar-app",
   "build": {},
