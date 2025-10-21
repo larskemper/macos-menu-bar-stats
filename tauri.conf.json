@@ -3,12 +3,7 @@
   "productName": "mac-menu-bar-app",
   "version": "0.1.0",
   "identifier": "com.lkemper.mac-menu-bar-app",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
-  },
+  "build": {},
   "app": {
     "windows": [],
     "security": {

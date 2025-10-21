@@ -21,7 +21,6 @@ struct SystemStats {
 
 struct AppState {
     system: Mutex<System>,
-    current_stats: Arc<Mutex<Option<SystemStats>>>,
 }
 
 fn get_stats_sync(sys: &mut System) -> SystemStats {
@@ -63,27 +62,19 @@ fn get_stats_sync(sys: &mut System) -> SystemStats {
     }
 }
 
-#[tauri::command]
-async fn get_system_stats(state: tauri::State<'_, AppState>) -> Result<SystemStats, String> {
-    let mut sys = state.system.lock().map_err(|e| e.to_string())?;
-    Ok(get_stats_sync(&mut sys))
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
     let mut sys = System::new_all();
     sys.refresh_cpu();
     sys.refresh_memory();
     
-    let current_stats = Arc::new(Mutex::new(None));
+    let current_stats: Arc<Mutex<Option<SystemStats>>> = Arc::new(Mutex::new(None));
     
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState {
             system: Mutex::new(sys),
-            current_stats: current_stats.clone(),
         })
-        .invoke_handler(tauri::generate_handler![get_system_stats])
         .setup(move |app| {
             // Create menu items
             let battery_item = MenuItem::with_id(app, "battery", "Battery: Loading...", true, None::<&str>)?;
