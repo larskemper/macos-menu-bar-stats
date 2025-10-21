@@ -3,9 +3,10 @@
 use tauri::Manager;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use sysinfo::System;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -20,6 +21,7 @@ struct SystemStats {
 
 struct AppState {
     system: Mutex<System>,
+    current_stats: Arc<Mutex<Option<SystemStats>>>,
 }
 
 fn get_stats_sync(sys: &mut System) -> SystemStats {
@@ -73,16 +75,20 @@ fn main() {
     sys.refresh_cpu();
     sys.refresh_memory();
     
+    let current_stats = Arc::new(Mutex::new(None));
+    
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(AppState {
             system: Mutex::new(sys),
+            current_stats: current_stats.clone(),
         })
         .invoke_handler(tauri::generate_handler![get_system_stats])
-        .setup(|app| {
+        .setup(move |app| {
             // Create menu items
-            let battery_item = MenuItem::with_id(app, "battery", "Battery: Loading...", false, None::<&str>)?;
-            let cpu_item = MenuItem::with_id(app, "cpu", "CPU: Loading...", false, None::<&str>)?;
-            let memory_item = MenuItem::with_id(app, "memory", "Memory: Loading...", false, None::<&str>)?;
+            let battery_item = MenuItem::with_id(app, "battery", "Battery: Loading...", true, None::<&str>)?;
+            let cpu_item = MenuItem::with_id(app, "cpu", "CPU: Loading...", true, None::<&str>)?;
+            let memory_item = MenuItem::with_id(app, "memory", "Memory: Loading...", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             
@@ -91,15 +97,42 @@ fn main() {
                 &[&battery_item, &cpu_item, &memory_item, &separator, &quit_item],
             )?;
 
+            let current_stats_for_menu = current_stats.clone();
             let tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .title("Loading...")
                 .icon_as_template(true)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
+                .on_menu_event(move |app, event| {
+                    match event.id.as_ref() {
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        "battery" => {
+                            if let Ok(stats) = current_stats_for_menu.lock() {
+                                if let Some(stats) = stats.as_ref() {
+                                    let percentage = format!("{}%", stats.battery_percent.round() as i32);
+                                    let _ = app.clipboard().write_text(percentage);
+                                }
+                            }
+                        }
+                        "cpu" => {
+                            if let Ok(stats) = current_stats_for_menu.lock() {
+                                if let Some(stats) = stats.as_ref() {
+                                    let percentage = format!("{:.1}%", stats.cpu_usage);
+                                    let _ = app.clipboard().write_text(percentage);
+                                }
+                            }
+                        }
+                        "memory" => {
+                            if let Ok(stats) = current_stats_for_menu.lock() {
+                                if let Some(stats) = stats.as_ref() {
+                                    let percentage = format!("{:.1}%", stats.memory_percent);
+                                    let _ = app.clipboard().write_text(percentage);
+                                }
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 })
                 .build(app)?;
 
@@ -110,6 +143,7 @@ fn main() {
 
             // Update tray title and menu periodically
             let app_handle = app.handle().clone();
+            let current_stats_for_thread = current_stats.clone();
             std::thread::spawn(move || {
                 loop {
                     std::thread::sleep(Duration::from_secs(2));
@@ -117,6 +151,11 @@ fn main() {
                     if let Some(state) = app_handle.try_state::<AppState>() {
                         if let Ok(mut sys) = state.system.lock() {
                             let stats = get_stats_sync(&mut sys);
+                            
+                            // Store current stats for clipboard access
+                            if let Ok(mut current) = current_stats_for_thread.lock() {
+                                *current = Some(stats.clone());
+                            }
                             let title = format!(
                                 "🔋{}%   🧠{}%   💾{}%",
                                 stats.battery_percent.round() as i32,
@@ -156,6 +195,11 @@ fn main() {
             if let Some(state) = app.try_state::<AppState>() {
                 if let Ok(mut sys) = state.system.lock() {
                     let stats = get_stats_sync(&mut sys);
+                    
+                    // Store initial stats
+                    if let Ok(mut current) = current_stats.lock() {
+                        *current = Some(stats.clone());
+                    }
                     let title = format!(
                         "🔋{}%   🧠{}%   💾{}%",
                         stats.battery_percent.round() as i32,
