@@ -1,49 +1,26 @@
 {
   "name": "mac-menu-bar-stats",
-  "version": "0.0.1",
-  "author": "Lars Kemper <larskemper0607@gmail.com> (larskemper.dev)",
-  "homepage": "https://github.com/LarsKemper/mac-menu-bar-stats#readme",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/LarsKemper/loveletter-io.git"
-  },
-  "bugs": {
-    "url": "https://github.com/LarsKemper/loveletter-io/issues"
-  },
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "ios": "react-native run-ios",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "start": "react-native start"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@react-native/new-app-screen": "0.82.1",
-    "react": "19.1.1",
-    "react-native": "0.82.1",
-    "react-native-safe-area-context": "^5.6.1"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "@babel/runtime": "^7.28.4",
-    "@react-native-community/cli": "20.0.0",
-    "@react-native-community/cli-platform-android": "20.0.0",
-    "@react-native-community/cli-platform-ios": "20.0.0",
-    "@react-native/babel-preset": "0.82.1",
-    "@react-native/eslint-config": "0.82.1",
-    "@react-native/metro-config": "0.82.1",
-    "@react-native/typescript-config": "0.82.1",
-    "@types/react": "^19.2.2",
-    "@types/react-test-renderer": "^19.1.0",
-    "eslint": "^8.57.1",
-    "prettier": "2.8.8",
-    "react-test-renderer": "19.1.1",
-    "typescript": "^5.9.3"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "packageManager": "pnpm@9.0.0"
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4",
+    "@tauri-apps/cli": "^2"
+  }
 }
