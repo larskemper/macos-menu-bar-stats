@@ -1,32 +1,86 @@
-# Mac Menu Bar Stats
+<h3>mac-menu-bar-stats</h3>
+<p>simple tauri macos menu bar app for system monitoring</p>
 
-A pure Rust/Tauri macOS menu bar application that displays system statistics (battery, CPU, and memory usage) in the menu bar.
+---
+
+## Overview
+
+- [Features](#features)
+- [Repository structure](#repository-structure)
+- [Tech Stack](#tech-stack)
+- [Development & Build](#development--build)
 
 ## Features
 
-- 🔋 Battery percentage and charging status
-- 🧠 CPU usage monitoring
-- 💾 Memory usage monitoring
-- Click menu items to copy values to clipboard
-- Updates every 2 seconds
+- 🔋 **Battery monitoring** - Real-time battery percentage and charging state
+- 🧠 **CPU usage tracking** - Monitor overall CPU utilization across all cores
+- 💾 **Memory usage tracking** - View used/total memory and utilization percentage
 
-## Development
+## Repository structure
 
-```bash
-pnpm install
-pnpm dev
-```
+This repository's contents are divided across the following primary sections:
 
-## Build
-
-```bash
-pnpm build
-```
-
-The built app will be in `src-tauri/target/release/bundle/`.
+- `/src` contains all Rust source code for the application
+- `/icons` contains all application icons for macOS
+- `/capabilities` contains Tauri security capabilities configuration
+- `/gen` contains generated schema files from Tauri
+- `/target` contains compiled binaries and build artifacts
 
 ## Tech Stack
 
-- Rust + Tauri (no frontend/JavaScript)
-- Native macOS menu bar integration
-- System monitoring via `sysinfo` and `battery` crates
+**Core Framework:**
+- [Tauri 2.0](https://tauri.app/) - Native application framework
+- [Rust](https://www.rust-lang.org/) - Systems programming language
+
+**System Monitoring:**
+- [`sysinfo`](https://crates.io/crates/sysinfo) - Cross-platform system information
+- [`battery`](https://crates.io/crates/battery) - Battery status monitoring
+
+## Development & Build
+
+### Prerequisites
+
+Ensure you have the following installed:
+- Rust (latest stable)
+- Xcode Command Line Tools (macOS)
+
+### Development
+
+Run the application in development mode with hot-reload:
+
+```bash
+cargo tauri dev
+```
+
+### Build
+
+Build the application for production:
+
+```bash
+cargo tauri build
+```
+
+The built application bundle will be available in:
+```
+target/release/bundle/macos/
+```
+
+### Check & Test
+
+Check code for errors without building:
+
+```bash
+cargo check
+```
+
+Run Clippy for linting:
+
+```bash
+cargo clippy
+```
+
+Format code:
+
+```bash
+cargo fmt
+```
