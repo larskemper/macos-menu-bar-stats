@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use battery::State as BatteryState;
+use starship_battery::State as BatteryState;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -64,7 +64,7 @@ fn collect_system_stats(sys: &mut System) -> SystemStats {
 }
 
 fn get_battery_info() -> (f32, String) {
-    match battery::Manager::new() {
+    match starship_battery::Manager::new() {
         Ok(manager) => match manager.batteries() {
             Ok(mut batteries) => {
                 if let Some(Ok(battery)) = batteries.next() {
