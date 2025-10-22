@@ -1,8 +1,19 @@
-<h3>mac-menu-bar-stats</h3>
-<p>Simple tauri macos menu bar app for system monitoring</p>
+<p align="center">
+<img height=80 src="icons/icon.svg" alt="Logo"/>
+</p>
 
-![CI](https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/ci.yml/badge.svg)
-![Security Audit](https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/security.yml/badge.svg)
+<p align="center">
+  <strong>mac-menu-bar-stats</strong>
+</p>
+
+<p align="center">
+Simple tauri macos menu bar app for system monitoring
+</p>
+
+<p align="center">
+  <img src="https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <img src="https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/security.yml/badge.svg" alt="Security Audit" />
+</p>
 
 ---
 
