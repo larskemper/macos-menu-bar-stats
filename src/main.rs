@@ -101,11 +101,22 @@ fn bytes_to_gb(bytes: u64) -> f32 {
     bytes as f32 / BYTES_TO_GB
 }
 
+fn create_bar(percentage: f32) -> String {
+    let blocks = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    let index = ((percentage / 100.0) * (blocks.len() - 1) as f32).round() as usize;
+    let index = index.min(blocks.len() - 1);
+
+    blocks[index].to_string()
+}
+
 fn format_tray_title(stats: &SystemStats) -> String {
     format!(
-        "🔋{}%   🧠{}%   💾{}%",
+        "🔋 {} {}% |  🧠 {} {}% |  💾 {} {}%",
+        create_bar(stats.battery_percent),
         stats.battery_percent.round() as i32,
+        create_bar(stats.cpu_usage),
         stats.cpu_usage.round() as i32,
+        create_bar(stats.memory_percent),
         stats.memory_percent.round() as i32
     )
 }
@@ -351,6 +362,9 @@ mod tests {
 
         let half_gb = bytes_to_gb(536870912);
         assert!((half_gb - 0.5).abs() < 0.001);
+
+        let large_value = bytes_to_gb(10995116277760);
+        assert!((large_value - 10240.0).abs() < 1.0);
     }
 
     #[test]
@@ -362,6 +376,34 @@ mod tests {
         );
         assert_eq!(format_battery_state(BatteryState::Full), "Full");
         assert_eq!(format_battery_state(BatteryState::Empty), "Empty");
+
+        assert_eq!(format_battery_state(BatteryState::Unknown), "Unknown");
+    }
+
+    #[test]
+    fn test_create_bar() {
+        assert_eq!(create_bar(0.0), "▁");
+        assert_eq!(create_bar(100.0), "█");
+
+        assert_eq!(create_bar(12.5), "▂");
+        assert_eq!(create_bar(25.0), "▃");
+        assert_eq!(create_bar(37.5), "▄");
+        assert_eq!(create_bar(50.0), "▅");
+        assert_eq!(create_bar(62.5), "▅");
+        assert_eq!(create_bar(75.0), "▆");
+        assert_eq!(create_bar(87.5), "▇");
+
+        assert_eq!(create_bar(1.0), "▁");
+        assert_eq!(create_bar(99.0), "█");
+    }
+
+    #[test]
+    fn test_create_bar_extreme_values() {
+        let bar_negative = create_bar(-10.0);
+        assert!(!bar_negative.is_empty());
+
+        let bar_over = create_bar(150.0);
+        assert!(!bar_over.is_empty());
     }
 
     #[test]
@@ -379,6 +421,38 @@ mod tests {
         assert!(title.contains("85%"));
         assert!(title.contains("46%"));
         assert!(title.contains("50%"));
+        assert!(title.contains("🔋"));
+        assert!(title.contains("🧠"));
+        assert!(title.contains("💾"));
+
+        assert!(title.contains("|"));
+    }
+
+    #[test]
+    fn test_format_tray_title_edge_cases() {
+        let stats_zero = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 0,
+            memory_total: 17179869184,
+            memory_percent: 0.0,
+            battery_percent: 0.0,
+            battery_state: "Empty".to_string(),
+        };
+
+        let title = format_tray_title(&stats_zero);
+        assert!(title.contains("0%"));
+
+        let stats_max = SystemStats {
+            cpu_usage: 100.0,
+            memory_used: 17179869184,
+            memory_total: 17179869184,
+            memory_percent: 100.0,
+            battery_percent: 100.0,
+            battery_state: "Full".to_string(),
+        };
+
+        let title_max = format_tray_title(&stats_max);
+        assert!(title_max.contains("100%"));
     }
 
     #[test]
@@ -395,6 +469,20 @@ mod tests {
         let text = format_battery_text(&stats);
         assert!(text.contains("76%"));
         assert!(text.contains("Discharging"));
+        assert!(text.contains("🔋"));
+
+        let stats_charging = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 0,
+            memory_total: 0,
+            memory_percent: 0.0,
+            battery_percent: 50.0,
+            battery_state: "Charging".to_string(),
+        };
+
+        let text_charging = format_battery_text(&stats_charging);
+        assert!(text_charging.contains("50%"));
+        assert!(text_charging.contains("Charging"));
     }
 
     #[test]
@@ -410,6 +498,19 @@ mod tests {
 
         let text = format_cpu_text(&stats);
         assert!(text.contains("33.7%"));
+        assert!(text.contains("🧠"));
+
+        let stats_zero = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 0,
+            memory_total: 0,
+            memory_percent: 0.0,
+            battery_percent: 0.0,
+            battery_state: "Unknown".to_string(),
+        };
+
+        let text_zero = format_cpu_text(&stats_zero);
+        assert!(text_zero.contains("0.0%"));
     }
 
     #[test]
@@ -427,6 +528,19 @@ mod tests {
         assert!(text.contains("50.0%"));
         assert!(text.contains("8.00 GB"));
         assert!(text.contains("16.00 GB"));
+        assert!(text.contains("💾"));
+
+        let stats_low = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 1073741824,
+            memory_total: 17179869184,
+            memory_percent: 6.25,
+            battery_percent: 0.0,
+            battery_state: "Unknown".to_string(),
+        };
+
+        let text_low = format_memory_text(&stats_low);
+        assert!(text_low.contains("1.00 GB"));
     }
 
     #[test]
@@ -441,6 +555,17 @@ mod tests {
         assert!(stats.memory_percent >= 0.0 && stats.memory_percent <= 100.0);
         assert!(stats.battery_percent >= 0.0 && stats.battery_percent <= 100.0);
         assert!(stats.memory_used <= stats.memory_total);
+
+        assert!(stats.memory_total > 0);
+
+        assert!(
+            stats.battery_state == "Charging"
+                || stats.battery_state == "Discharging"
+                || stats.battery_state == "Full"
+                || stats.battery_state == "Empty"
+                || stats.battery_state == "Unknown"
+                || stats.battery_state == "No Battery"
+        );
     }
 
     #[test]
@@ -464,6 +589,29 @@ mod tests {
     }
 
     #[test]
+    fn test_system_stats_serialization() {
+        let stats = SystemStats {
+            cpu_usage: 50.0,
+            memory_used: 1073741824,
+            memory_total: 2147483648,
+            memory_percent: 50.0,
+            battery_percent: 80.0,
+            battery_state: "Charging".to_string(),
+        };
+
+        let json = serde_json::to_string(&stats);
+        assert!(json.is_ok());
+
+        let json_str = json.unwrap();
+        let deserialized: Result<SystemStats, _> = serde_json::from_str(&json_str);
+        assert!(deserialized.is_ok());
+
+        let deserialized_stats = deserialized.unwrap();
+        assert_eq!(stats.cpu_usage, deserialized_stats.cpu_usage);
+        assert_eq!(stats.memory_used, deserialized_stats.memory_used);
+    }
+
+    #[test]
     fn test_constants() {
         assert_eq!(UPDATE_INTERVAL_SECS, 3);
         assert_eq!(BYTES_TO_GB, 1073741824.0);
@@ -473,5 +621,22 @@ mod tests {
         assert_eq!(MENU_MEMORY, "memory");
         assert_eq!(MENU_AUTOSTART, "autostart");
         assert_eq!(MENU_QUIT, "quit");
+    }
+
+    #[test]
+    fn test_system_stats_boundary_values() {
+        let stats = SystemStats {
+            cpu_usage: 100.0,
+            memory_used: u64::MAX,
+            memory_total: u64::MAX,
+            memory_percent: 100.0,
+            battery_percent: 100.0,
+            battery_state: "Full".to_string(),
+        };
+
+        let _ = format_tray_title(&stats);
+        let _ = format_battery_text(&stats);
+        let _ = format_cpu_text(&stats);
+        let _ = format_memory_text(&stats);
     }
 }

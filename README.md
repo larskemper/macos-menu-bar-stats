@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-Simple tauri macos menu bar app for system monitoring
+Simple macOS menu bar app for system monitoring
 </p>
 
 <p align="center">
