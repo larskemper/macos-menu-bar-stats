@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use sysinfo::System;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, CheckMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
@@ -144,7 +144,7 @@ fn update_menu_items<R: tauri::Runtime>(
     if let Err(e) = cpu.set_text(format_cpu_text(stats)) {
         eprintln!("Failed to update CPU menu item: {}", e);
     }
-    
+
     if let Err(e) = memory.set_text(format_memory_text(stats)) {
         eprintln!("Failed to update memory menu item: {}", e);
     }
@@ -249,7 +249,7 @@ fn main() {
             let memory_item =
                 MenuItem::with_id(app, MENU_MEMORY, "Memory: Loading...", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
-            
+
             let autostart_manager = app.autolaunch();
             let is_autostart_enabled = autostart_manager.is_enabled().unwrap_or(false);
             let autostart_item = CheckMenuItem::with_id(
@@ -260,7 +260,7 @@ fn main() {
                 is_autostart_enabled,
                 None::<&str>,
             )?;
-            
+
             let quit_item = MenuItem::with_id(app, MENU_QUIT, "Quit", true, None::<&str>)?;
 
             let menu = Menu::with_items(
@@ -280,33 +280,33 @@ fn main() {
             let tray = TrayIconBuilder::with_id(TRAY_ID)
                 .menu(&menu)
                 .title("Loading...")
-                .on_menu_event(move |app, event| {
-                    match event.id.as_ref() {
-                        MENU_QUIT => app.exit(0),
-                        MENU_AUTOSTART => {
-                            let autostart_manager = app.autolaunch();
-                            match autostart_manager.is_enabled() {
-                                Ok(is_enabled) => {
-                                    let result = if is_enabled {
-                                        autostart_manager.disable()
-                                    } else {
-                                        autostart_manager.enable()
-                                    };
-                                    
-                                    match result {
-                                        Ok(_) => {
-                                            if let Err(e) = autostart_item_clone.set_checked(!is_enabled) {
-                                                eprintln!("Failed to update autostart checkbox: {}", e);
-                                            }
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    MENU_QUIT => app.exit(0),
+                    MENU_AUTOSTART => {
+                        let autostart_manager = app.autolaunch();
+                        match autostart_manager.is_enabled() {
+                            Ok(is_enabled) => {
+                                let result = if is_enabled {
+                                    autostart_manager.disable()
+                                } else {
+                                    autostart_manager.enable()
+                                };
+
+                                match result {
+                                    Ok(_) => {
+                                        if let Err(e) =
+                                            autostart_item_clone.set_checked(!is_enabled)
+                                        {
+                                            eprintln!("Failed to update autostart checkbox: {}", e);
                                         }
-                                        Err(e) => eprintln!("Failed to toggle autostart: {}", e),
                                     }
+                                    Err(e) => eprintln!("Failed to toggle autostart: {}", e),
                                 }
-                                Err(e) => eprintln!("Failed to check autostart status: {}", e),
                             }
+                            Err(e) => eprintln!("Failed to check autostart status: {}", e),
                         }
-                        _ => handle_menu_click(app, event.id.as_ref(), &current_stats_for_menu),
                     }
+                    _ => handle_menu_click(app, event.id.as_ref(), &current_stats_for_menu),
                 })
                 .build(app)?;
 
