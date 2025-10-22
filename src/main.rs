@@ -10,7 +10,7 @@ use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-const UPDATE_INTERVAL_SECS: u64 = 2;
+const UPDATE_INTERVAL_SECS: u64 = 3;
 const BYTES_TO_GB: f32 = 1024.0 * 1024.0 * 1024.0;
 const TRAY_ID: &str = "menu_bar_stats_tray";
 
@@ -37,11 +37,17 @@ fn collect_system_stats(sys: &mut System) -> SystemStats {
     sys.refresh_cpu();
     sys.refresh_memory();
 
-    let cpu_usage = sys.global_cpu_info().cpu_usage();
+    let cpu_usage = sys.global_cpu_info().cpu_usage().clamp(0.0, 100.0);
+
     let memory_total = sys.total_memory();
-    let memory_available = sys.available_memory();
+    let memory_available = sys.available_memory().min(memory_total);
     let memory_used = memory_total - memory_available;
-    let memory_percent = (memory_used as f32 / memory_total as f32) * 100.0;
+
+    let memory_percent = if memory_total > 0 {
+        ((memory_used as f64 / memory_total as f64) * 100.0).clamp(0.0, 100.0) as f32
+    } else {
+        0.0
+    };
 
     let (battery_percent, battery_state) = get_battery_info();
 
@@ -50,23 +56,33 @@ fn collect_system_stats(sys: &mut System) -> SystemStats {
         memory_used,
         memory_total,
         memory_percent,
-        battery_percent,
+        battery_percent: battery_percent.clamp(0.0, 100.0),
         battery_state,
     }
 }
 
 fn get_battery_info() -> (f32, String) {
-    battery::Manager::new()
-        .ok()
-        .and_then(|manager| manager.batteries().ok())
-        .and_then(|mut batteries| batteries.next())
-        .and_then(|battery| battery.ok())
-        .map(|battery| {
-            let percent = battery.state_of_charge().value * 100.0;
-            let state = format_battery_state(battery.state());
-            (percent, state)
-        })
-        .unwrap_or((0.0, "Unknown".to_string()))
+    match battery::Manager::new() {
+        Ok(manager) => match manager.batteries() {
+            Ok(mut batteries) => {
+                if let Some(Ok(battery)) = batteries.next() {
+                    let percent = battery.state_of_charge().value * 100.0;
+                    let state = format_battery_state(battery.state());
+                    (percent, state)
+                } else {
+                    (0.0, "No Battery".to_string())
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to get batteries: {}", e);
+                (0.0, "Unknown".to_string())
+            }
+        },
+        Err(e) => {
+            eprintln!("Failed to create battery manager: {}", e);
+            (0.0, "Unknown".to_string())
+        }
+    }
 }
 
 fn format_battery_state(state: BatteryState) -> String {
@@ -119,9 +135,15 @@ fn update_menu_items<R: tauri::Runtime>(
     cpu: &MenuItem<R>,
     memory: &MenuItem<R>,
 ) {
-    let _ = battery.set_text(format_battery_text(stats));
-    let _ = cpu.set_text(format_cpu_text(stats));
-    let _ = memory.set_text(format_memory_text(stats));
+    if let Err(e) = battery.set_text(format_battery_text(stats)) {
+        eprintln!("Failed to update battery menu item: {}", e);
+    }
+    if let Err(e) = cpu.set_text(format_cpu_text(stats)) {
+        eprintln!("Failed to update CPU menu item: {}", e);
+    }
+    if let Err(e) = memory.set_text(format_memory_text(stats)) {
+        eprintln!("Failed to update memory menu item: {}", e);
+    }
 }
 
 fn handle_menu_click<R: tauri::Runtime>(
@@ -132,9 +154,15 @@ fn handle_menu_click<R: tauri::Runtime>(
     let stats = match current_stats.lock() {
         Ok(guard) => match guard.as_ref() {
             Some(stats) => stats.clone(),
-            None => return,
+            None => {
+                eprintln!("No stats available to copy");
+                return;
+            }
         },
-        Err(_) => return,
+        Err(e) => {
+            eprintln!("Failed to lock stats mutex: {}", e);
+            return;
+        }
     };
 
     let text = match event_id {
@@ -144,7 +172,9 @@ fn handle_menu_click<R: tauri::Runtime>(
         _ => return,
     };
 
-    let _ = app.clipboard().write_text(text);
+    if let Err(e) = app.clipboard().write_text(text) {
+        eprintln!("Failed to write to clipboard: {}", e);
+    }
 }
 
 fn spawn_stats_updater<R: tauri::Runtime>(
@@ -154,34 +184,43 @@ fn spawn_stats_updater<R: tauri::Runtime>(
     cpu_item: MenuItem<R>,
     memory_item: MenuItem<R>,
 ) {
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_secs(UPDATE_INTERVAL_SECS));
+    std::thread::Builder::new()
+        .name("stats-updater".to_string())
+        .spawn(move || loop {
+            std::thread::sleep(Duration::from_secs(UPDATE_INTERVAL_SECS));
 
-        let Some(state) = app_handle.try_state::<AppState>() else {
-            continue;
-        };
+            let Some(state) = app_handle.try_state::<AppState>() else {
+                eprintln!("Failed to get app state");
+                continue;
+            };
 
-        let Ok(mut sys) = state.system.lock() else {
-            continue;
-        };
+            let Ok(mut sys) = state.system.lock() else {
+                eprintln!("Failed to lock system mutex");
+                continue;
+            };
 
-        let stats = collect_system_stats(&mut sys);
+            let stats = collect_system_stats(&mut sys);
 
-        if let Ok(mut current) = current_stats.lock() {
-            *current = Some(stats.clone());
-        }
+            if let Ok(mut current) = current_stats.lock() {
+                *current = Some(stats.clone());
+            } else {
+                eprintln!("Failed to lock current stats mutex");
+            }
 
-        if let Some(tray) = app_handle.tray_by_id(TRAY_ID) {
-            let _ = tray.set_title(Some(&format_tray_title(&stats)));
-        }
+            if let Some(tray) = app_handle.tray_by_id(TRAY_ID) {
+                if let Err(e) = tray.set_title(Some(&format_tray_title(&stats))) {
+                    eprintln!("Failed to update tray title: {}", e);
+                }
+            }
 
-        update_menu_items(&stats, &battery_item, &cpu_item, &memory_item);
-    });
+            update_menu_items(&stats, &battery_item, &cpu_item, &memory_item);
+        })
+        .expect("Failed to spawn stats updater thread");
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
-    let mut sys = System::new_all();
+    let mut sys = System::new();
     sys.refresh_cpu();
     sys.refresh_memory();
 
@@ -233,7 +272,9 @@ fn main() {
                         *current = Some(stats.clone());
                     }
 
-                    let _ = tray.set_title(Some(&format_tray_title(&stats)));
+                    if let Err(e) = tray.set_title(Some(&format_tray_title(&stats))) {
+                        eprintln!("Failed to set initial tray title: {}", e);
+                    }
                     update_menu_items(&stats, &battery_item, &cpu_item, &memory_item);
                 }
             }
@@ -250,4 +291,140 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bytes_to_gb_conversion() {
+        assert_eq!(bytes_to_gb(0), 0.0);
+        assert_eq!(bytes_to_gb(1073741824), 1.0);
+        assert_eq!(bytes_to_gb(2147483648), 2.0);
+
+        let half_gb = bytes_to_gb(536870912);
+        assert!((half_gb - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_format_battery_state() {
+        assert_eq!(format_battery_state(BatteryState::Charging), "Charging");
+        assert_eq!(
+            format_battery_state(BatteryState::Discharging),
+            "Discharging"
+        );
+        assert_eq!(format_battery_state(BatteryState::Full), "Full");
+        assert_eq!(format_battery_state(BatteryState::Empty), "Empty");
+    }
+
+    #[test]
+    fn test_format_tray_title() {
+        let stats = SystemStats {
+            cpu_usage: 45.7,
+            memory_used: 8589934592,
+            memory_total: 17179869184,
+            memory_percent: 50.0,
+            battery_percent: 85.3,
+            battery_state: "Charging".to_string(),
+        };
+
+        let title = format_tray_title(&stats);
+        assert!(title.contains("85%"));
+        assert!(title.contains("46%"));
+        assert!(title.contains("50%"));
+    }
+
+    #[test]
+    fn test_format_battery_text() {
+        let stats = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 0,
+            memory_total: 0,
+            memory_percent: 0.0,
+            battery_percent: 75.5,
+            battery_state: "Discharging".to_string(),
+        };
+
+        let text = format_battery_text(&stats);
+        assert!(text.contains("76%"));
+        assert!(text.contains("Discharging"));
+    }
+
+    #[test]
+    fn test_format_cpu_text() {
+        let stats = SystemStats {
+            cpu_usage: 33.7,
+            memory_used: 0,
+            memory_total: 0,
+            memory_percent: 0.0,
+            battery_percent: 0.0,
+            battery_state: "Unknown".to_string(),
+        };
+
+        let text = format_cpu_text(&stats);
+        assert!(text.contains("33.7%"));
+    }
+
+    #[test]
+    fn test_format_memory_text() {
+        let stats = SystemStats {
+            cpu_usage: 0.0,
+            memory_used: 8589934592,
+            memory_total: 17179869184,
+            memory_percent: 50.0,
+            battery_percent: 0.0,
+            battery_state: "Unknown".to_string(),
+        };
+
+        let text = format_memory_text(&stats);
+        assert!(text.contains("50.0%"));
+        assert!(text.contains("8.00 GB"));
+        assert!(text.contains("16.00 GB"));
+    }
+
+    #[test]
+    fn test_collect_system_stats_validation() {
+        let mut sys = System::new();
+        sys.refresh_cpu();
+        sys.refresh_memory();
+
+        let stats = collect_system_stats(&mut sys);
+
+        assert!(stats.cpu_usage >= 0.0 && stats.cpu_usage <= 100.0);
+        assert!(stats.memory_percent >= 0.0 && stats.memory_percent <= 100.0);
+        assert!(stats.battery_percent >= 0.0 && stats.battery_percent <= 100.0);
+        assert!(stats.memory_used <= stats.memory_total);
+    }
+
+    #[test]
+    fn test_system_stats_clone() {
+        let stats = SystemStats {
+            cpu_usage: 50.0,
+            memory_used: 1073741824,
+            memory_total: 2147483648,
+            memory_percent: 50.0,
+            battery_percent: 80.0,
+            battery_state: "Charging".to_string(),
+        };
+
+        let cloned = stats.clone();
+        assert_eq!(stats.cpu_usage, cloned.cpu_usage);
+        assert_eq!(stats.memory_used, cloned.memory_used);
+        assert_eq!(stats.memory_total, cloned.memory_total);
+        assert_eq!(stats.memory_percent, cloned.memory_percent);
+        assert_eq!(stats.battery_percent, cloned.battery_percent);
+        assert_eq!(stats.battery_state, cloned.battery_state);
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(UPDATE_INTERVAL_SECS, 3);
+        assert_eq!(BYTES_TO_GB, 1073741824.0);
+        assert_eq!(TRAY_ID, "menu_bar_stats_tray");
+        assert_eq!(MENU_BATTERY, "battery");
+        assert_eq!(MENU_CPU, "cpu");
+        assert_eq!(MENU_MEMORY, "memory");
+        assert_eq!(MENU_QUIT, "quit");
+    }
 }

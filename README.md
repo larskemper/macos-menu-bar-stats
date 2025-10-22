@@ -1,6 +1,9 @@
 <h3>mac-menu-bar-stats</h3>
 <p>simple tauri macos menu bar app for system monitoring</p>
 
+![CI](https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/ci.yml/badge.svg)
+![Security Audit](https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/security.yml/badge.svg)
+
 ---
 
 ## Overview

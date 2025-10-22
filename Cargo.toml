@@ -1,5 +1,5 @@
 [package]
-name = "mac-menu-bar-stats"
+name = "system-stats"
 version = "0.1.0"
 description = "simple tauri macos menu bar app for system monitoring"
 authors = ["Lars Kemper <larskemper0607@gmail.com> (larskemper.dev)"]
@@ -10,7 +10,7 @@ edition = "2021"
 
 
 [lib]
-name = "mac_menu_bar_stats_lib"
+name = "system_stats_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -18,11 +18,15 @@ tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
 tauri = { version = "2.0", features = ["tray-icon"] }
-tauri-plugin-opener = "2.0"
 tauri-plugin-clipboard-manager = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sysinfo = "0.30"
 battery = "0.7"
-tokio = { version = "1", features = ["full"] }
 
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

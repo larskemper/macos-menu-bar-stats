@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Menu bar stats",
+  "productName": "System stats",
   "version": "0.1.0",
-  "identifier": "com.lkemper.mac-menu-bar-stats",
+  "identifier": "com.lkemper.system-stats",
   "build": {},
   "app": {
     "windows": [],
