@@ -12,7 +12,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 
 const UPDATE_INTERVAL_SECS: u64 = 2;
 const BYTES_TO_GB: f32 = 1024.0 * 1024.0 * 1024.0;
-const TRAY_ID: &str = "main";
+const TRAY_ID: &str = "menu_bar_stats_tray";
 
 const MENU_BATTERY: &str = "battery";
 const MENU_CPU: &str = "cpu";
@@ -38,8 +38,9 @@ fn collect_system_stats(sys: &mut System) -> SystemStats {
     sys.refresh_memory();
 
     let cpu_usage = sys.global_cpu_info().cpu_usage();
-    let memory_used = sys.used_memory();
     let memory_total = sys.total_memory();
+    let memory_available = sys.available_memory();
+    let memory_used = memory_total - memory_available;
     let memory_percent = (memory_used as f32 / memory_total as f32) * 100.0;
 
     let (battery_percent, battery_state) = get_battery_info();
@@ -215,7 +216,6 @@ fn main() {
             let tray = TrayIconBuilder::with_id(TRAY_ID)
                 .menu(&menu)
                 .title("Loading...")
-                .icon_as_template(true)
                 .on_menu_event(move |app, event| {
                     if event.id.as_ref() == MENU_QUIT {
                         app.exit(0);
