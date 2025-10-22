@@ -40,3 +40,4 @@ jobs:
           log-level: warn
           command: check
           arguments: --all-features
+          rust-version: stable
