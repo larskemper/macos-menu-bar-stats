@@ -240,6 +240,9 @@ fn main() {
             system: Mutex::new(sys),
         })
         .setup(move |app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let battery_item =
                 MenuItem::with_id(app, MENU_BATTERY, "Battery: Loading...", true, None::<&str>)?;
             let cpu_item = MenuItem::with_id(app, MENU_CPU, "CPU: Loading...", true, None::<&str>)?;

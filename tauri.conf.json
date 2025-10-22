@@ -2,9 +2,10 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "System stats",
   "version": "0.1.0",
-  "identifier": "com.lkemper.system-stats",
+  "identifier": "dev.larskemper.system-stats",
   "build": {},
   "app": {
+    "macOSPrivateApi": true,
     "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
