@@ -19,10 +19,26 @@ Simple macOS menu bar app for system monitoring
 
 ## Overview
 
+- [Installation](#installation)
 - [Features](#features)
 - [Repository structure](#repository-structure)
 - [Tech Stack](#tech-stack)
 - [Development & Build](#development--build)
+
+## Installation
+
+### Via Homebrew (Recommended)
+
+```bash
+brew install --cask larskemper/cask/system-stats
+```
+
+### Manual Installation
+
+Download the latest DMG for your Mac architecture:
+
+- **Apple Silicon**: [system-stats-aarch64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
+- **Intel**: [system-stats-x86_64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
 
 ## Features
 
@@ -45,11 +61,6 @@ This repository's contents are divided across the following primary sections:
 **Core Framework:**
 - [Tauri 2.0](https://tauri.app/) - Native application framework
 - [Rust](https://www.rust-lang.org/) - Systems programming language
-
-**System Monitoring:**
-- [`sysinfo`](https://crates.io/crates/sysinfo) - Cross-platform system information
-- [`battery`](https://crates.io/crates/battery) - Battery status monitoring
-
 ## Development & Build
 
 ### Prerequisites
