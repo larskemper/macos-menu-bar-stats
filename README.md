@@ -11,6 +11,10 @@ Simple macOS menu bar app for system monitoring
 </p>
 
 <p align="center">
+  <img src=".github/assets/menu-bar-stats.png" alt="Menu Bar Stats Demo" width="250" style="border-radius: 10px;"/>
+</p>
+
+<p align="center">
   <img src="https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/ci.yml/badge.svg" alt="CI" />
   <img src="https://github.com/larskemper/macos-menu-bar-stats/actions/workflows/security.yml/badge.svg" alt="Security Audit" />
 </p>
