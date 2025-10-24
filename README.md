@@ -1,5 +1,5 @@
 <p align="center">
-<img height=80 src="icons/icon.svg" alt="Logo"/>
+<img height=80 src=".github/assets/logo.png" alt="Logo"/>
 </p>
 
 <p align="center">
@@ -28,77 +28,76 @@ Simple macOS menu bar app for system monitoring
 ## Installation
 
 ### Via Homebrew (Recommended)
-
 ```bash
 brew install --cask larskemper/cask/system-stats
 ```
 
 ### Manual Installation
 
-Download the latest DMG for your Mac architecture:
+Download the DMG for your architecture:
 
 - **Apple Silicon**: [system-stats-aarch64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
 - **Intel**: [system-stats-x86_64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
 
+> **Note:** The distributed binaries are shipped with the macOS quarantine flag removed 
+
 ## Features
 
-- 🔋 **Battery monitoring** - Real-time battery percentage and charging state
-- 🧠 **CPU usage tracking** - Monitor overall CPU utilization across all cores
-- 💾 **Memory usage tracking** - View used/total memory and utilization percentage
+- Battery percentage and charging state
+- CPU usage across all cores
+- Memory usage and utilization percentage
 
-## Repository structure
+## Repository Structure
 
-This repository's contents are divided across the following primary sections:
-
-- `/src` contains all Rust source code for the application
-- `/icons` contains all application icons for macOS
-- `/capabilities` contains Tauri security capabilities configuration
-- `/gen` contains generated schema files from Tauri
-- `/target` contains compiled binaries and build artifacts
+- `/src` - Rust source code
+- `/icons` - Application icons
+- `/capabilities` - Tauri security capabilities
+- `/gen` - Generated schema files
+- `/target` - Build artifacts
 
 ## Tech Stack
 
-**Core Framework:**
-- [Tauri 2.0](https://tauri.app/) - Native application framework
-- [Rust](https://www.rust-lang.org/) - Systems programming language
+- [Tauri 2.0](https://tauri.app/)
+- [Rust](https://www.rust-lang.org/)
+
 ## Development & Build
 
 ### Prerequisites
 
 Ensure you have the following installed:
 - Rust (latest stable)
-- Xcode Command Line Tools (macOS)
+- Xcode Command Line Tools
 
 ### Development
 
-Run the application in development mode with hot-reload:
+Run in development mode:
 
 ```bash
-cargo tauri dev
+cargo run tauri dev
 ```
 
 ### Build
 
-Build the application for production:
+Build the application:
 
 ```bash
-cargo tauri build
+cargo build
 ```
 
-The built application bundle will be available in:
+Output location:
 ```
 target/release/bundle/macos/
 ```
 
 ### Check & Test
 
-Check code for errors without building:
+Check for errors:
 
 ```bash
 cargo check
 ```
 
-Run Clippy for linting:
+Run linter:
 
 ```bash
 cargo clippy
