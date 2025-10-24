@@ -39,7 +39,21 @@ Download the DMG for your architecture:
 - **Apple Silicon**: [system-stats-aarch64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
 - **Intel**: [system-stats-x86_64.dmg](https://github.com/larskemper/macos-menu-bar-stats/releases/latest)
 
-> **Note:** The distributed binaries are shipped with the macOS quarantine flag removed 
+### macOS Quarantine Flags
+
+The distributed DMG files are built **without** macOS quarantine flags, so they should install without Gatekeeper warnings.
+
+If you encounter a "cannot be opened because the developer cannot be verified" message, you can manually remove the quarantine flag:
+
+```bash
+# Remove quarantine from the app
+xattr -dr com.apple.quarantine "/Applications/System Stats.app"
+
+# Verify removal (should return "No such xattr" or no output)
+xattr -l "/Applications/System Stats.app"
+```
+
+Then try opening the app again.
 
 ## Features
 
