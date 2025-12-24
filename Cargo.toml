@@ -1,6 +1,6 @@
 [package]
 name = "system-stats"
-version = "0.1.0"
+version = "0.1.1"
 description = "simple tauri macos menu bar app for system monitoring"
 authors = ["Lars Kemper <larskemper0607@gmail.com> (larskemper.dev)"]
 repository = "https://github.com/larskemper/macos-menu-bar-stats"
